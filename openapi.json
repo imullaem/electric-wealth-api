@@ -1,0 +1,1928 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Electric Wealth API",
+    "version": "0.1.0",
+    "description": "REST API for the Electric Wealth web app. Money values are integers in minor units (cents). Errors use the ErrorEnvelope shape. Demo sign-in: any persona email, password `Demo123!`, MFA code `123456`."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4100",
+      "description": "Local development"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Access token from POST /api/auth/token, after POST /api/auth/mfa/verify."
+      }
+    },
+    "schemas": {
+      "TokenResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "expiresIn": {
+            "type": "number",
+            "enum": [
+              900
+            ]
+          },
+          "mfaRequired": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "tokenType",
+          "expiresIn",
+          "mfaRequired"
+        ]
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "example": "NOT_FOUND"
+              },
+              "message": {
+                "type": "string"
+              },
+              "traceId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "traceId"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "TokenRequest": {
+        "type": "object",
+        "properties": {
+          "grantType": {
+            "type": "string",
+            "enum": [
+              "password"
+            ]
+          },
+          "username": {
+            "type": "string",
+            "format": "email",
+            "example": "sarah.chen@example.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "example": "Demo123!"
+          }
+        },
+        "required": [
+          "grantType",
+          "username",
+          "password"
+        ]
+      },
+      "MfaVerifyResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "number",
+            "enum": [
+              900
+            ]
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiresIn"
+        ]
+      },
+      "MfaVerifyRequest": {
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "description": "Opaque challenge id (the demo accepts any value)"
+          },
+          "code": {
+            "type": "string",
+            "example": "123456"
+          },
+          "method": {
+            "$ref": "#/components/schemas/MfaMethod"
+          }
+        },
+        "required": [
+          "challengeId",
+          "code",
+          "method"
+        ]
+      },
+      "MfaMethod": {
+        "type": "string",
+        "enum": [
+          "sms",
+          "email"
+        ]
+      },
+      "RefreshResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "tokenType": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
+          },
+          "expiresIn": {
+            "type": "number",
+            "enum": [
+              900
+            ]
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "tokenType",
+          "expiresIn"
+        ]
+      },
+      "RefreshRequest": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "LogoutRequest": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string"
+          }
+        }
+      },
+      "ProfileResponse": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phoneMasked": {
+            "type": "string"
+          },
+          "dateOfBirth": {
+            "type": "string"
+          },
+          "sinMasked": {
+            "type": "string"
+          },
+          "memberSince": {
+            "type": "integer"
+          },
+          "address": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "trustedContact": {
+            "$ref": "#/components/schemas/TrustedContact"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "phoneMasked",
+          "dateOfBirth",
+          "memberSince",
+          "address"
+        ]
+      },
+      "Address": {
+        "type": "object",
+        "properties": {
+          "line1": {
+            "type": "string"
+          },
+          "line2": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "province": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "line1",
+          "city",
+          "province",
+          "postalCode",
+          "country"
+        ]
+      },
+      "TrustedContact": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "relationship"
+        ]
+      },
+      "PreferencesResponse": {
+        "type": "object",
+        "properties": {
+          "notifications": {
+            "$ref": "#/components/schemas/NotificationPrefs"
+          },
+          "documentDelivery": {
+            "$ref": "#/components/schemas/DocumentDelivery"
+          },
+          "language": {
+            "$ref": "#/components/schemas/Language"
+          },
+          "theme": {
+            "$ref": "#/components/schemas/Theme"
+          },
+          "defaultMeetingType": {
+            "$ref": "#/components/schemas/MeetingType"
+          }
+        },
+        "required": [
+          "notifications",
+          "documentDelivery",
+          "language",
+          "theme",
+          "defaultMeetingType"
+        ]
+      },
+      "NotificationPrefs": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "boolean"
+          },
+          "sms": {
+            "type": "boolean"
+          },
+          "push": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "email",
+          "sms",
+          "push"
+        ]
+      },
+      "DocumentDelivery": {
+        "type": "string",
+        "enum": [
+          "digital",
+          "paper_and_digital"
+        ]
+      },
+      "Language": {
+        "type": "string",
+        "enum": [
+          "en-CA",
+          "fr-CA"
+        ]
+      },
+      "Theme": {
+        "type": "string",
+        "enum": [
+          "light",
+          "dark",
+          "system"
+        ]
+      },
+      "MeetingType": {
+        "type": "string",
+        "enum": [
+          "video",
+          "phone",
+          "in_person"
+        ]
+      },
+      "PreferencesUpdate": {
+        "type": "object",
+        "properties": {
+          "notifications": {
+            "$ref": "#/components/schemas/NotificationPrefs"
+          },
+          "documentDelivery": {
+            "$ref": "#/components/schemas/DocumentDelivery"
+          },
+          "language": {
+            "$ref": "#/components/schemas/Language"
+          },
+          "theme": {
+            "$ref": "#/components/schemas/Theme"
+          },
+          "defaultMeetingType": {
+            "$ref": "#/components/schemas/MeetingType"
+          }
+        }
+      },
+      "DashboardResponse": {
+        "type": "object",
+        "properties": {
+          "portfolio": {
+            "$ref": "#/components/schemas/PortfolioSummary"
+          },
+          "allocation": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AllocationItem"
+            }
+          },
+          "goals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardGoalSummary"
+            }
+          },
+          "alerts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardAlert"
+            }
+          },
+          "quickLinks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuickLink"
+            }
+          }
+        },
+        "required": [
+          "portfolio",
+          "allocation",
+          "goals",
+          "alerts",
+          "quickLinks"
+        ]
+      },
+      "PortfolioSummary": {
+        "type": "object",
+        "properties": {
+          "totalValue": {
+            "type": "integer",
+            "description": "Sum of visible account balances (minor units)",
+            "example": 3241000
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "ISO-4217 currency code",
+            "example": "CAD"
+          },
+          "dayChange": {
+            "type": "integer"
+          },
+          "dayChangePct": {
+            "type": "number"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "totalValue",
+          "currency",
+          "dayChange",
+          "dayChangePct",
+          "asOf"
+        ]
+      },
+      "AllocationItem": {
+        "type": "object",
+        "properties": {
+          "assetClass": {
+            "type": "string",
+            "example": "Equity"
+          },
+          "pct": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "assetClass",
+          "pct"
+        ]
+      },
+      "DashboardGoalSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "progressPct": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "progressPct"
+        ]
+      },
+      "DashboardAlert": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/AlertType"
+          },
+          "title": {
+            "type": "string"
+          },
+          "deepLink": {
+            "type": "string",
+            "example": "electricwealth://documents/d1"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "title"
+        ]
+      },
+      "AlertType": {
+        "type": "string",
+        "enum": [
+          "ACTION_REQUIRED",
+          "INFO",
+          "SUCCESS",
+          "WARNING"
+        ]
+      },
+      "QuickLink": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "deepLink": {
+            "type": "string",
+            "example": "electricwealth://documents"
+          }
+        },
+        "required": [
+          "label",
+          "deepLink"
+        ]
+      },
+      "AccountsListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountSummary"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "pageSize": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ]
+      },
+      "AccountSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "tfsa"
+          },
+          "type": {
+            "$ref": "#/components/schemas/AccountType"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Growth TFSA"
+          },
+          "nickname": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "balance": {
+            "type": "integer",
+            "description": "Amount in minor units (cents)",
+            "example": 3241000
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "ISO-4217 currency code",
+            "example": "CAD"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "dayChange": {
+            "type": "integer"
+          },
+          "dayChangePct": {
+            "type": "number"
+          },
+          "contributionRoom": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "taxStatus": {
+            "type": "string",
+            "example": "Tax-free"
+          },
+          "rateOfReturn": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "displayName",
+          "nickname",
+          "balance",
+          "currency",
+          "hidden",
+          "taxStatus"
+        ]
+      },
+      "AccountType": {
+        "type": "string",
+        "enum": [
+          "TFSA",
+          "RRSP",
+          "RESP",
+          "RDSP",
+          "FHSA",
+          "NON_REGISTERED",
+          "LIRA",
+          "RRIF"
+        ]
+      },
+      "AccountDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AccountSummary"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "holdings": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Holding"
+                }
+              }
+            },
+            "required": [
+              "holdings"
+            ]
+          }
+        ]
+      },
+      "Holding": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "example": "XEQT.TO"
+          },
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "marketValue": {
+            "type": "integer",
+            "description": "Amount in minor units (cents)",
+            "example": 3241000
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "ISO-4217 currency code",
+            "example": "CAD"
+          },
+          "weightPct": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "symbol",
+          "name",
+          "quantity",
+          "marketValue",
+          "currency",
+          "weightPct"
+        ]
+      },
+      "AccountPatchRequest": {
+        "type": "object",
+        "properties": {
+          "nickname": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 40
+          },
+          "hidden": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TransactionsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Transaction"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "pageSize": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "scheduled": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Transaction"
+            }
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total",
+          "scheduled"
+        ]
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "description": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TransactionType"
+          },
+          "amount": {
+            "type": "integer",
+            "description": "Amount in minor units (cents)",
+            "example": 3241000
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "ISO-4217 currency code",
+            "example": "CAD"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "description",
+          "type",
+          "amount",
+          "currency"
+        ]
+      },
+      "TransactionType": {
+        "type": "string",
+        "enum": [
+          "contribution",
+          "buy",
+          "sell",
+          "dividend",
+          "fee",
+          "withdrawal",
+          "transfer",
+          "scheduled"
+        ]
+      },
+      "PerformanceResponse": {
+        "type": "object",
+        "properties": {
+          "range": {
+            "$ref": "#/components/schemas/PerformanceRange"
+          },
+          "timeWeightedReturnPct": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "ISO-4217 currency code",
+            "example": "CAD"
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PerformancePoint"
+            }
+          },
+          "benchmark": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "series": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/PerformancePoint"
+                }
+              }
+            },
+            "required": [
+              "name",
+              "series"
+            ]
+          }
+        },
+        "required": [
+          "range",
+          "timeWeightedReturnPct",
+          "currency",
+          "series",
+          "benchmark"
+        ]
+      },
+      "PerformanceRange": {
+        "type": "string",
+        "enum": [
+          "1M",
+          "1Y",
+          "ALL"
+        ]
+      },
+      "PerformancePoint": {
+        "type": "object",
+        "properties": {
+          "t": {
+            "type": "string",
+            "description": "Period, e.g. 2024-03",
+            "example": "2024-03"
+          },
+          "v": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "t",
+          "v"
+        ]
+      },
+      "DocumentsListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Document"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "pageSize": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ]
+      },
+      "Document": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "d1"
+          },
+          "name": {
+            "type": "string",
+            "example": "2024 T5 Tax Slip"
+          },
+          "category": {
+            "type": "string",
+            "example": "Tax"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "accountId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "accountLabel": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer"
+          },
+          "actionRequired": {
+            "type": "boolean"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category",
+          "year",
+          "accountId",
+          "sizeBytes",
+          "actionRequired",
+          "url"
+        ]
+      },
+      "DocumentDetailResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "base64Stub": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "url",
+          "contentType",
+          "base64Stub"
+        ]
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/api/auth/token": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Sign in with email and password",
+        "description": "Returns a session that still requires MFA (`mfaRequired: true`). Call `/api/auth/mfa/verify` next.",
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session created; MFA required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/mfa/verify": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Complete MFA for the current session",
+        "description": "Send the access token from `/api/auth/token` as a Bearer token. The demo code is `123456`.",
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaVerifyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Session is now MFA-verified",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MfaVerifyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Exchange a refresh token for a new session",
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New tokens",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Revoke the current session",
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Signed out"
+          }
+        }
+      }
+    },
+    "/api/profile": {
+      "get": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Signed-in user profile",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/preferences": {
+      "get": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Signed-in user preferences",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Preferences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Update preferences (partial update)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferencesUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated preferences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferencesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wealth/dashboard": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Portfolio summary, allocation, goals, alerts and quick links",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "$ref": "#/components/schemas/Language"
+            },
+            "required": false,
+            "name": "accept-language",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wealth/accounts": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "List visible accounts",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20
+            },
+            "required": false,
+            "name": "pageSize",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountsListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wealth/accounts/{id}": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Account detail with holdings",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "tfsa"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Update an account nickname or visibility",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "tfsa"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountPatchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wealth/accounts/{id}/transactions": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Posted transactions (paged) plus upcoming scheduled transactions",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "tfsa"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20
+            },
+            "required": false,
+            "name": "pageSize",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/TransactionType"
+            },
+            "required": false,
+            "name": "type",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transactions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wealth/accounts/{id}/performance": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Account performance series with benchmark",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "tfsa"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/PerformanceRange"
+            },
+            "required": false,
+            "name": "range",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Performance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerformanceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wealth/documents": {
+      "get": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "List documents (tax slips, statements, confirmations, legal)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20
+            },
+            "required": false,
+            "name": "pageSize",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "required": false,
+            "name": "year",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "category",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentsListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wealth/documents/{id}": {
+      "get": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Document download stub",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "d1"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Liveness check",
+        "responses": {
+          "200": {
+            "description": "Service is up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

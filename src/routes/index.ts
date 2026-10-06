@@ -1,0 +1,14 @@
+import { jsonBody, registry } from '../openapi/registry.js';
+import { HealthResponseSchema } from '../schemas/error.js';
+
+export { createAuthRouter } from './auth.js';
+export { createPreferencesRouter, createProfileRouter } from './profile.js';
+export { createWealthRouter } from './wealth.js';
+
+registry.registerPath({
+  method: 'get',
+  path: '/health',
+  tags: ['Health'],
+  summary: 'Liveness check',
+  responses: { 200: jsonBody(HealthResponseSchema, 'Service is up') },
+});
