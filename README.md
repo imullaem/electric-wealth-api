@@ -10,7 +10,7 @@ The REST API for **Electric Wealth**, a Canadian retail wealth-management web ap
 
 ## Getting started
 
-Prerequisite: **Node.js 22.13+**. Clone the three repos side by side:
+Prerequisite: **Node.js 24** (workshop standard: 24.19.0, see `.nvmrc`). Clone the three repos side by side:
 
 ```
 some-folder/

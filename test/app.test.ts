@@ -28,7 +28,7 @@ beforeAll(() => {
   }
   tmpDir = mkdtempSync(join(tmpdir(), 'ew-api-test-'));
   const dbPath = join(tmpDir, 'test.db');
-  execFileSync(process.execPath, ['--disable-warning=ExperimentalWarning', dbRepoReset, '--db', dbPath], {
+  execFileSync(process.execPath, [dbRepoReset, '--db', dbPath], {
     stdio: 'ignore',
   });
   db = openDatabase(dbPath);
