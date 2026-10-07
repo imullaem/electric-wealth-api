@@ -1,5 +1,10 @@
 import { opt, toBool, type Db } from '../db/connection.js';
-import type { PreferencesResponse, PreferencesUpdate, ProfileResponse } from '../schemas/profile.js';
+import type {
+  PreferencesResponse,
+  PreferencesUpdate,
+  ProfileAddressUpdate,
+  ProfileResponse,
+} from '../schemas/profile.js';
 
 interface ProfileRow {
   name: string;
@@ -47,6 +52,14 @@ export function findProfile(db: Db, userId: string): ProfileResponse | undefined
         ? { name: r.trusted_contact_name, relationship: r.trusted_contact_relationship }
         : undefined,
   };
+}
+
+export function updateAddress(db: Db, userId: string, { address }: ProfileAddressUpdate): void {
+  db.prepare(
+    `UPDATE user_profiles
+     SET address_line1 = ?, address_line2 = ?, city = ?, province = ?, postal_code = ?, country = ?
+     WHERE user_id = ?`,
+  ).run(address.line1, address.line2 || null, address.city, address.province, address.postalCode, address.country, userId);
 }
 
 interface PreferencesRow {

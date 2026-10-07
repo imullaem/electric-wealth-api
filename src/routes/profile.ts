@@ -2,8 +2,13 @@ import { Router } from 'express';
 import type { Db } from '../db/connection.js';
 import { authMiddleware, parseOr400, sendError } from '../middleware/index.js';
 import { errors, jsonBody, registry, secured } from '../openapi/registry.js';
-import { findPreferences, findProfile, updatePreferences } from '../repositories/profile.js';
-import { PreferencesResponseSchema, PreferencesUpdateSchema, ProfileResponseSchema } from '../schemas/profile.js';
+import { findPreferences, findProfile, updateAddress, updatePreferences } from '../repositories/profile.js';
+import {
+  PreferencesResponseSchema,
+  PreferencesUpdateSchema,
+  ProfileAddressUpdateSchema,
+  ProfileResponseSchema,
+} from '../schemas/profile.js';
 
 registry.registerPath({
   method: 'get',
@@ -12,6 +17,16 @@ registry.registerPath({
   summary: 'Signed-in user profile',
   security: secured,
   responses: { 200: jsonBody(ProfileResponseSchema, 'Profile'), ...errors(401, 404) },
+});
+
+registry.registerPath({
+  method: 'put',
+  path: '/api/profile/address',
+  tags: ['Profile'],
+  summary: 'Replace the mailing address',
+  security: secured,
+  request: { body: jsonBody(ProfileAddressUpdateSchema) },
+  responses: { 200: jsonBody(ProfileResponseSchema, 'Updated profile'), ...errors(400, 401, 404) },
 });
 
 registry.registerPath({
@@ -38,6 +53,18 @@ export function createProfileRouter(db: Db) {
   router.use(authMiddleware(db));
 
   router.get('/', (req, res) => {
+    const profile = findProfile(db, req.userId!);
+    if (!profile) {
+      sendError(req, res, 404, 'NOT_FOUND', 'Profile not found.');
+      return;
+    }
+    res.json(ProfileResponseSchema.parse(profile));
+  });
+
+  router.put('/address', (req, res) => {
+    const update = parseOr400(ProfileAddressUpdateSchema, req.body, req, res);
+    if (!update) return;
+    updateAddress(db, req.userId!, update);
     const profile = findProfile(db, req.userId!);
     if (!profile) {
       sendError(req, res, 404, 'NOT_FOUND', 'Profile not found.');

@@ -284,6 +284,72 @@
           "relationship"
         ]
       },
+      "ProfileAddressUpdate": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "object",
+            "properties": {
+              "line1": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "line2": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "city": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 60
+              },
+              "province": {
+                "$ref": "#/components/schemas/Province"
+              },
+              "postalCode": {
+                "type": "string",
+                "pattern": "^[A-Za-z]\\d[A-Za-z] ?\\d[A-Za-z]\\d$",
+                "example": "M5V 2A1"
+              },
+              "country": {
+                "type": "string",
+                "enum": [
+                  "Canada"
+                ]
+              }
+            },
+            "required": [
+              "line1",
+              "city",
+              "province",
+              "postalCode",
+              "country"
+            ]
+          }
+        },
+        "required": [
+          "address"
+        ]
+      },
+      "Province": {
+        "type": "string",
+        "enum": [
+          "AB",
+          "BC",
+          "MB",
+          "NB",
+          "NL",
+          "NS",
+          "NT",
+          "NU",
+          "ON",
+          "PE",
+          "QC",
+          "SK",
+          "YT"
+        ]
+      },
       "PreferencesResponse": {
         "type": "object",
         "properties": {
@@ -364,7 +430,18 @@
         "type": "object",
         "properties": {
           "notifications": {
-            "$ref": "#/components/schemas/NotificationPrefs"
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "boolean"
+              },
+              "sms": {
+                "type": "boolean"
+              },
+              "push": {
+                "type": "boolean"
+              }
+            }
           },
           "documentDelivery": {
             "$ref": "#/components/schemas/DocumentDelivery"
@@ -1197,6 +1274,71 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile/address": {
+      "put": {
+        "tags": [
+          "Profile"
+        ],
+        "summary": "Replace the mailing address",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileAddressUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             }

@@ -14,7 +14,7 @@ import {
 import { TokenResponseSchema } from '../src/schemas/auth.js';
 import { DashboardResponseSchema } from '../src/schemas/dashboard.js';
 import { DocumentsListResponseSchema } from '../src/schemas/documents.js';
-import { PreferencesResponseSchema } from '../src/schemas/profile.js';
+import { PreferencesResponseSchema, ProfileResponseSchema } from '../src/schemas/profile.js';
 
 // Tests run against a fresh copy of the database, built by the sibling electric-wealth-db repo.
 const dbRepoReset = resolve(import.meta.dirname, '../../electric-wealth-db/scripts/reset.js');
@@ -235,6 +235,60 @@ describe('documents', () => {
   });
 });
 
+describe('profile', () => {
+  it('returns the profile with trusted contact', async () => {
+    const { accessToken } = await login();
+    const profile = ProfileResponseSchema.parse((await request(app).get('/api/profile').set(auth(accessToken))).body);
+    expect(profile.name).toBe('Sarah Chen');
+    expect(profile.trustedContact).toEqual({ name: 'David Chen', relationship: 'Sibling' });
+  });
+
+  it('updates the address and normalizes the postal code', async () => {
+    const { accessToken } = await login('emma.wilson@example.com');
+    const res = await request(app)
+      .put('/api/profile/address')
+      .set(auth(accessToken))
+      .send({
+        address: { line1: ' 1 Harbour Lane ', line2: 'Unit 4', city: 'Dartmouth', province: 'NS', postalCode: 'b2y4a1', country: 'Canada' },
+      });
+    expect(res.status).toBe(200);
+    const profile = ProfileResponseSchema.parse(res.body);
+    expect(profile.address).toEqual({
+      line1: '1 Harbour Lane',
+      line2: 'Unit 4',
+      city: 'Dartmouth',
+      province: 'NS',
+      postalCode: 'B2Y 4A1',
+      country: 'Canada',
+    });
+    const again = ProfileResponseSchema.parse((await request(app).get('/api/profile').set(auth(accessToken))).body);
+    expect(again.address.city).toBe('Dartmouth');
+  });
+
+  it('clears address line 2 when it is blank', async () => {
+    const { accessToken } = await login('emma.wilson@example.com');
+    const res = await request(app)
+      .put('/api/profile/address')
+      .set(auth(accessToken))
+      .send({ address: { line1: '1 Harbour Lane', line2: '  ', city: 'Dartmouth', province: 'NS', postalCode: 'B2Y 4A1', country: 'Canada' } });
+    expect(res.body.address.line2).toBeUndefined();
+  });
+
+  it('rejects an invalid postal code or province', async () => {
+    const { accessToken } = await login();
+    const base = { line1: '1 Main St', city: 'Toronto', country: 'Canada' };
+    for (const address of [
+      { ...base, province: 'ON', postalCode: '90210' },
+      { ...base, province: 'XX', postalCode: 'M5V 2A1' },
+      { ...base, line1: '', province: 'ON', postalCode: 'M5V 2A1' },
+    ]) {
+      const res = await request(app).put('/api/profile/address').set(auth(accessToken)).send({ address });
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    }
+  });
+});
+
 describe('preferences', () => {
   it('updates language and keeps other preferences', async () => {
     const { accessToken } = await login('david.kim@example.com');
@@ -242,6 +296,18 @@ describe('preferences', () => {
     const prefs = PreferencesResponseSchema.parse(res.body);
     expect(prefs.language).toBe('fr-CA');
     expect(prefs.theme).toBe('dark');
+  });
+
+  it('merges a partial notification update', async () => {
+    const { accessToken } = await login('robert.foster@example.com');
+    const before = PreferencesResponseSchema.parse((await request(app).get('/api/preferences').set(auth(accessToken))).body);
+    const res = await request(app)
+      .put('/api/preferences')
+      .set(auth(accessToken))
+      .send({ notifications: { sms: !before.notifications.sms }, documentDelivery: 'paper_and_digital' });
+    const prefs = PreferencesResponseSchema.parse(res.body);
+    expect(prefs.notifications).toEqual({ ...before.notifications, sms: !before.notifications.sms });
+    expect(prefs.documentDelivery).toBe('paper_and_digital');
   });
 });
 
