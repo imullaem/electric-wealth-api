@@ -14,6 +14,7 @@ import {
 import { TokenResponseSchema } from '../src/schemas/auth.js';
 import { DashboardResponseSchema } from '../src/schemas/dashboard.js';
 import { DocumentsListResponseSchema } from '../src/schemas/documents.js';
+import { NotificationsResponseSchema } from '../src/schemas/notifications.js';
 import { PreferencesResponseSchema, ProfileResponseSchema } from '../src/schemas/profile.js';
 
 // Tests run against a fresh copy of the database, built by the sibling electric-wealth-db repo.
@@ -308,6 +309,38 @@ describe('preferences', () => {
     const prefs = PreferencesResponseSchema.parse(res.body);
     expect(prefs.notifications).toEqual({ ...before.notifications, sms: !before.notifications.sms });
     expect(prefs.documentDelivery).toBe('paper_and_digital');
+  });
+});
+
+describe('notifications', () => {
+  it('lists notifications newest first with read state', async () => {
+    const { accessToken } = await login();
+    const list = NotificationsResponseSchema.parse((await request(app).get('/api/notifications').set(auth(accessToken))).body);
+    expect(list.map((n) => n.id)).toEqual(['no1', 'no2', 'no3', 'no4', 'no5']);
+    expect(list.filter((n) => !n.read).map((n) => n.id)).toEqual(['no1', 'no2']);
+  });
+
+  it('marks one notification read and persists it', async () => {
+    const { accessToken } = await login('linda.rodriguez@example.com');
+    const res = await request(app).post('/api/notifications/no-l1/read').set(auth(accessToken));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ id: 'no-l1', read: true });
+    const list = NotificationsResponseSchema.parse((await request(app).get('/api/notifications').set(auth(accessToken))).body);
+    expect(list.every((n) => n.read)).toBe(true);
+  });
+
+  it("returns 404 for another user's notification", async () => {
+    const { accessToken } = await login('emma.wilson@example.com');
+    const res = await request(app).post('/api/notifications/no1/read').set(auth(accessToken));
+    expect(res.status).toBe(404);
+  });
+
+  it('marks all notifications read', async () => {
+    const { accessToken } = await login('michael.thompson@example.com');
+    const res = await request(app).post('/api/notifications/read-all').set(auth(accessToken));
+    expect(res.body).toEqual({ updated: 1 });
+    const again = await request(app).post('/api/notifications/read-all').set(auth(accessToken));
+    expect(again.body).toEqual({ updated: 0 });
   });
 });
 

@@ -39,3 +39,7 @@ export const AccountTypeSchema = z
 export const AlertTypeSchema = z.enum(['ACTION_REQUIRED', 'INFO', 'SUCCESS', 'WARNING']).openapi('AlertType');
 
 export const MfaMethodSchema = z.enum(['sms', 'email']).openapi('MfaMethod');
+
+export const NotificationTypeSchema = z
+  .enum(['ACTION_REQUIRED', 'INFO', 'SUCCESS', 'WARNING'])
+  .openapi('NotificationType');

@@ -11,7 +11,13 @@ import {
   traceMiddleware,
 } from './middleware/index.js';
 import { buildOpenApiDocument } from './openapi/document.js';
-import { createAuthRouter, createPreferencesRouter, createProfileRouter, createWealthRouter } from './routes/index.js';
+import {
+  createAuthRouter,
+  createNotificationsRouter,
+  createPreferencesRouter,
+  createProfileRouter,
+  createWealthRouter,
+} from './routes/index.js';
 
 export interface AppOptions {
   db: Db;
@@ -43,6 +49,7 @@ export function createApp({ db, corsOrigins = [], logRequests = true }: AppOptio
   app.use('/api/wealth', createWealthRouter(db));
   app.use('/api/profile', createProfileRouter(db));
   app.use('/api/preferences', createPreferencesRouter(db));
+  app.use('/api/notifications', createNotificationsRouter(db));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
