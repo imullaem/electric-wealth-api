@@ -201,6 +201,124 @@
           }
         }
       },
+      "EducationContentResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/EducationContent"
+        }
+      },
+      "EducationContent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "e1"
+          },
+          "title": {
+            "type": "string",
+            "description": "In the language from Accept-Language"
+          },
+          "level": {
+            "$ref": "#/components/schemas/EducationLevel"
+          },
+          "type": {
+            "$ref": "#/components/schemas/EducationType"
+          },
+          "durationMin": {
+            "type": "integer"
+          },
+          "progressPct": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "level",
+          "type",
+          "durationMin",
+          "progressPct"
+        ]
+      },
+      "EducationLevel": {
+        "type": "string",
+        "enum": [
+          "beginner",
+          "intermediate",
+          "advanced"
+        ]
+      },
+      "EducationType": {
+        "type": "string",
+        "enum": [
+          "class",
+          "challenge"
+        ]
+      },
+      "Language": {
+        "type": "string",
+        "enum": [
+          "en-CA",
+          "fr-CA"
+        ]
+      },
+      "GlossaryResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/GlossaryEntry"
+        }
+      },
+      "GlossaryEntry": {
+        "type": "object",
+        "properties": {
+          "term": {
+            "type": "string"
+          },
+          "definition": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "term",
+          "definition"
+        ]
+      },
+      "EducationProgressResponse": {
+        "type": "object",
+        "properties": {
+          "contentId": {
+            "type": "string"
+          },
+          "progressPct": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "contentId",
+          "progressPct"
+        ]
+      },
+      "EducationProgressRequest": {
+        "type": "object",
+        "properties": {
+          "contentId": {
+            "type": "string"
+          },
+          "progressPct": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "contentId",
+          "progressPct"
+        ]
+      },
       "GoalsListResponse": {
         "type": "object",
         "properties": {
@@ -613,13 +731,6 @@
         "enum": [
           "digital",
           "paper_and_digital"
-        ]
-      },
-      "Language": {
-        "type": "string",
-        "enum": [
-          "en-CA",
-          "fr-CA"
         ]
       },
       "Theme": {
@@ -1526,6 +1637,208 @@
         "responses": {
           "204": {
             "description": "Signed out"
+          }
+        }
+      }
+    },
+    "/api/education/content": {
+      "get": {
+        "tags": [
+          "Education"
+        ],
+        "summary": "Learning centre catalogue with the user’s progress",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "$ref": "#/components/schemas/EducationLevel"
+            },
+            "required": false,
+            "name": "level",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/EducationType"
+            },
+            "required": false,
+            "name": "type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/Language"
+            },
+            "required": false,
+            "name": "accept-language",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Classes and challenges",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EducationContentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/education/glossary": {
+      "get": {
+        "tags": [
+          "Education"
+        ],
+        "summary": "Financial glossary, A to Z, optionally filtered",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 60,
+              "description": "Matches the term or definition, case-insensitive"
+            },
+            "required": false,
+            "description": "Matches the term or definition, case-insensitive",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/Language"
+            },
+            "required": false,
+            "name": "accept-language",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Glossary entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlossaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/education/progress": {
+      "post": {
+        "tags": [
+          "Education"
+        ],
+        "summary": "Save progress on a class or challenge",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EducationProgressRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EducationProgressResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
           }
         }
       }

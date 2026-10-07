@@ -14,6 +14,7 @@ import {
 import { TokenResponseSchema } from '../src/schemas/auth.js';
 import { DashboardResponseSchema } from '../src/schemas/dashboard.js';
 import { DocumentsListResponseSchema } from '../src/schemas/documents.js';
+import { EducationContentResponseSchema, GlossaryResponseSchema } from '../src/schemas/education.js';
 import { GoalSchema, GoalsListResponseSchema } from '../src/schemas/goals.js';
 import { NotificationsResponseSchema } from '../src/schemas/notifications.js';
 import { PreferencesResponseSchema, ProfileResponseSchema } from '../src/schemas/profile.js';
@@ -426,6 +427,65 @@ describe('goals', () => {
       const res = await request(app).post('/api/wealth/goals').set(auth(accessToken)).send(body);
       expect(res.status, JSON.stringify(body)).toBe(400);
     }
+  });
+});
+
+describe('education', () => {
+  it("lists the catalogue with the user's progress", async () => {
+    const { accessToken } = await login();
+    const items = EducationContentResponseSchema.parse(
+      (await request(app).get('/api/education/content').set(auth(accessToken))).body,
+    );
+    expect(items.map((i) => [i.id, i.progressPct])).toEqual([
+      ['e1', 100],
+      ['e2', 60],
+      ['e3', 0],
+      ['e4', 0],
+      ['e5', 0],
+      ['e6', 0],
+    ]);
+  });
+
+  it('filters by level and type and localizes titles', async () => {
+    const { accessToken } = await login();
+    const res = await request(app)
+      .get('/api/education/content?level=beginner&type=challenge')
+      .set(auth(accessToken))
+      .set('Accept-Language', 'fr-CA');
+    expect(res.body).toEqual([expect.objectContaining({ id: 'e3', title: 'CELI ou REER : lequel en premier?' })]);
+  });
+
+  it('saves progress and creates a row the first time', async () => {
+    const { accessToken } = await login('robert.foster@example.com');
+    const res = await request(app).post('/api/education/progress').set(auth(accessToken)).send({ contentId: 'e4', progressPct: 100 });
+    expect(res.body).toEqual({ contentId: 'e4', progressPct: 100 });
+    const items = EducationContentResponseSchema.parse(
+      (await request(app).get('/api/education/content').set(auth(accessToken))).body,
+    );
+    expect(items.find((i) => i.id === 'e4')?.progressPct).toBe(100);
+  });
+
+  it('rejects unknown content and out-of-range progress', async () => {
+    const { accessToken } = await login();
+    expect((await request(app).post('/api/education/progress').set(auth(accessToken)).send({ contentId: 'zz', progressPct: 10 })).status).toBe(404);
+    expect((await request(app).post('/api/education/progress').set(auth(accessToken)).send({ contentId: 'e1', progressPct: 101 })).status).toBe(400);
+  });
+
+  it('searches the glossary in the requested language', async () => {
+    const { accessToken } = await login();
+    const all = GlossaryResponseSchema.parse((await request(app).get('/api/education/glossary').set(auth(accessToken))).body);
+    expect(all).toHaveLength(7);
+    expect(all[0].term).toBe('Asset allocation');
+    const en = GlossaryResponseSchema.parse((await request(app).get('/api/education/glossary?q=tax').set(auth(accessToken))).body);
+    expect(en.map((e) => e.term)).toEqual(['RRSP', 'TFSA']);
+    const fr = GlossaryResponseSchema.parse(
+      (await request(app).get('/api/education/glossary?q=celi').set(auth(accessToken)).set('Accept-Language', 'fr-CA')).body,
+    );
+    expect(fr.map((e) => e.term)).toEqual(['CELI']);
+    const frAll = GlossaryResponseSchema.parse(
+      (await request(app).get('/api/education/glossary').set(auth(accessToken)).set('Accept-Language', 'fr-CA')).body,
+    );
+    expect(frAll.map((e) => e.term).slice(-4)).toEqual(['Rééquilibrage', 'REER', 'Répartition de l’actif', 'Taux de rendement']);
   });
 });
 
