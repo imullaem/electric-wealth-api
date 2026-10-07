@@ -24,6 +24,7 @@ const errorDescriptions: Record<number, string> = {
   400: 'Validation error',
   401: 'Missing, expired or not MFA-verified access token',
   404: 'Resource not found',
+  409: 'Conflicts with the current state (e.g. the slot was just taken)',
   429: 'Rate limited',
 };
 

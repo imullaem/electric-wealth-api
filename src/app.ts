@@ -12,6 +12,7 @@ import {
 } from './middleware/index.js';
 import { buildOpenApiDocument } from './openapi/document.js';
 import {
+  createAdvisorRouter,
   createAuthRouter,
   createEducationRouter,
   createGoalsRouter,
@@ -54,6 +55,7 @@ export function createApp({ db, corsOrigins = [], logRequests = true }: AppOptio
   app.use('/api/preferences', createPreferencesRouter(db));
   app.use('/api/notifications', createNotificationsRouter(db));
   app.use('/api/education', createEducationRouter(db));
+  app.use('/api/advisor', createAdvisorRouter(db));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

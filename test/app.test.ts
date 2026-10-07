@@ -14,6 +14,13 @@ import {
 import { TokenResponseSchema } from '../src/schemas/auth.js';
 import { DashboardResponseSchema } from '../src/schemas/dashboard.js';
 import { DocumentsListResponseSchema } from '../src/schemas/documents.js';
+import {
+  AdvisorMessagesResponseSchema,
+  AppointmentSchema,
+  AppointmentsResponseSchema,
+  AvailabilityResponseSchema,
+} from '../src/schemas/advisor.js';
+import { nextBusinessDays } from '../src/repositories/advisor.js';
 import { EducationContentResponseSchema, GlossaryResponseSchema } from '../src/schemas/education.js';
 import { GoalSchema, GoalsListResponseSchema } from '../src/schemas/goals.js';
 import { NotificationsResponseSchema } from '../src/schemas/notifications.js';
@@ -486,6 +493,94 @@ describe('education', () => {
       (await request(app).get('/api/education/glossary').set(auth(accessToken)).set('Accept-Language', 'fr-CA')).body,
     );
     expect(frAll.map((e) => e.term).slice(-4)).toEqual(['Rééquilibrage', 'REER', 'Répartition de l’actif', 'Taux de rendement']);
+  });
+});
+
+describe('advisor', () => {
+  it('computes the next five business days', () => {
+    // 2026-10-09 is a Friday.
+    expect(nextBusinessDays('2026-10-09', 5)).toEqual(['2026-10-12', '2026-10-13', '2026-10-14', '2026-10-15', '2026-10-16']);
+  });
+
+  it('offers five days of slots with the assigned advisor', async () => {
+    const { accessToken } = await login();
+    const a = AvailabilityResponseSchema.parse((await request(app).get('/api/advisor/availability').set(auth(accessToken))).body);
+    expect(a.advisor).toMatchObject({ name: 'Jordan Avery', designation: 'CFP' });
+    expect(a.days).toHaveLength(5);
+    expect(a.days[0].slots).toEqual(['09:00', '10:30', '12:00', '14:30', '16:00']);
+  });
+
+  it('books a slot, hides it from everyone, and refuses a double booking', async () => {
+    const sarah = await login();
+    const linda = await login('linda.rodriguez@example.com');
+    const { days } = AvailabilityResponseSchema.parse((await request(app).get('/api/advisor/availability').set(auth(sarah.accessToken))).body);
+    const date = days[1].date;
+    const res = await request(app)
+      .post('/api/advisor/appointments')
+      .set(auth(sarah.accessToken))
+      .send({ meetingType: 'phone', date, time: '10:30', notes: 'Year-end review' });
+    expect(res.status).toBe(201);
+    expect(AppointmentSchema.parse(res.body)).toMatchObject({ status: 'scheduled', meetingType: 'phone', advisorId: 'adv-1' });
+
+    const forLinda = AvailabilityResponseSchema.parse((await request(app).get('/api/advisor/availability').set(auth(linda.accessToken))).body);
+    expect(forLinda.days[1].slots).not.toContain('10:30');
+    const clash = await request(app)
+      .post('/api/advisor/appointments')
+      .set(auth(linda.accessToken))
+      .send({ meetingType: 'video', date, time: '10:30' });
+    expect(clash.status).toBe(409);
+    expect(clash.body.error.code).toBe('SLOT_UNAVAILABLE');
+  });
+
+  it('rejects slots outside the booking window or schedule', async () => {
+    const { accessToken } = await login('david.kim@example.com');
+    const { days } = AvailabilityResponseSchema.parse((await request(app).get('/api/advisor/availability').set(auth(accessToken))).body);
+    for (const body of [
+      { meetingType: 'video', date: '2024-12-09', time: '09:00' },
+      { meetingType: 'video', date: days[0].date, time: '08:00' },
+    ]) {
+      expect((await request(app).post('/api/advisor/appointments').set(auth(accessToken)).send(body)).status).toBe(409);
+    }
+    expect((await request(app).post('/api/advisor/appointments').set(auth(accessToken)).send({ meetingType: 'video', date: days[0].date, time: '9am' })).status).toBe(400);
+  });
+
+  it('reschedules, frees the old slot and cancels', async () => {
+    const { accessToken } = await login('michael.thompson@example.com');
+    const { days } = AvailabilityResponseSchema.parse((await request(app).get('/api/advisor/availability').set(auth(accessToken))).body);
+    const booked = await request(app)
+      .post('/api/advisor/appointments')
+      .set(auth(accessToken))
+      .send({ meetingType: 'video', date: days[2].date, time: '09:00' });
+    const id = booked.body.id as string;
+    const moved = await request(app).patch(`/api/advisor/appointments/${id}`).set(auth(accessToken)).send({ date: days[3].date, time: '16:00' });
+    expect(moved.body).toMatchObject({ date: days[3].date, time: '16:00', status: 'scheduled' });
+    const after = AvailabilityResponseSchema.parse((await request(app).get('/api/advisor/availability').set(auth(accessToken))).body);
+    expect(after.days[2].slots).toContain('09:00');
+    expect(after.days[3].slots).not.toContain('16:00');
+
+    const cancelled = await request(app).patch(`/api/advisor/appointments/${id}`).set(auth(accessToken)).send({ status: 'cancelled' });
+    expect(cancelled.body.status).toBe('cancelled');
+    const again = await request(app).patch(`/api/advisor/appointments/${id}`).set(auth(accessToken)).send({ status: 'cancelled' });
+    expect(again.status).toBe(409);
+    expect((await request(app).patch(`/api/advisor/appointments/${id}`).set(auth(accessToken)).send({ date: days[3].date })).status).toBe(400);
+  });
+
+  it("lists the user's appointments including past ones", async () => {
+    const { accessToken } = await login();
+    const list = AppointmentsResponseSchema.parse((await request(app).get('/api/advisor/appointments').set(auth(accessToken))).body);
+    expect(list[0]).toMatchObject({ id: 'appt-sarah-1', status: 'completed' });
+  });
+
+  it('keeps a message thread and appends client messages', async () => {
+    const { accessToken } = await login('emma.wilson@example.com');
+    const before = AdvisorMessagesResponseSchema.parse((await request(app).get('/api/advisor/messages').set(auth(accessToken))).body);
+    expect(before).toHaveLength(1);
+    const sent = await request(app).post('/api/advisor/messages').set(auth(accessToken)).send({ text: '  Thanks Jordan!  ' });
+    expect(sent.status).toBe(201);
+    expect(sent.body).toMatchObject({ from: 'client', text: 'Thanks Jordan!' });
+    const after = AdvisorMessagesResponseSchema.parse((await request(app).get('/api/advisor/messages').set(auth(accessToken))).body);
+    expect(after.at(-1)?.id).toBe(sent.body.id);
+    expect((await request(app).post('/api/advisor/messages').set(auth(accessToken)).send({ text: '   ' })).status).toBe(400);
   });
 });
 
