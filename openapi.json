@@ -201,6 +201,139 @@
           }
         }
       },
+      "GoalsListResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Goal"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "pageSize": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ]
+      },
+      "Goal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "goal-1"
+          },
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/GoalCategory"
+          },
+          "currentAmount": {
+            "type": "integer",
+            "description": "Amount in minor units (cents)",
+            "example": 3241000
+          },
+          "targetAmount": {
+            "type": "integer",
+            "description": "Amount in minor units (cents)",
+            "example": 3241000
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date",
+            "example": "2027-06-30"
+          },
+          "progressPct": {
+            "type": "number",
+            "description": "currentAmount / targetAmount, as a percentage (0-100)"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category",
+          "currentAmount",
+          "targetAmount",
+          "currency",
+          "targetDate",
+          "progressPct"
+        ]
+      },
+      "GoalCategory": {
+        "type": "string",
+        "enum": [
+          "Education",
+          "Vacation",
+          "Home",
+          "Retirement",
+          "Safety"
+        ]
+      },
+      "GoalCreateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "category": {
+            "$ref": "#/components/schemas/GoalCategory"
+          },
+          "targetAmount": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 10000000000,
+            "description": "Amount in minor units (cents)",
+            "example": 3241000
+          },
+          "currentAmount": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000000000,
+            "description": "Defaults to 0",
+            "example": 3241000
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "CAD"
+            ]
+          },
+          "targetDate": {
+            "type": "string",
+            "format": "date",
+            "example": "2027-06-30"
+          }
+        },
+        "required": [
+          "name",
+          "category",
+          "targetAmount",
+          "currency",
+          "targetDate"
+        ]
+      },
       "NotificationsResponse": {
         "type": "array",
         "items": {
@@ -1331,6 +1464,129 @@
         "responses": {
           "204": {
             "description": "Signed out"
+          }
+        }
+      }
+    },
+    "/api/wealth/goals": {
+      "get": {
+        "tags": [
+          "Goals"
+        ],
+        "summary": "List savings goals",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "example": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "example": 20
+            },
+            "required": false,
+            "name": "pageSize",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Goals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalsListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Goals"
+        ],
+        "summary": "Create a savings goal",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created goal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Goal"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
           }
         }
       }

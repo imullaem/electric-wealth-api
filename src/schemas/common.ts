@@ -43,3 +43,10 @@ export const MfaMethodSchema = z.enum(['sms', 'email']).openapi('MfaMethod');
 export const NotificationTypeSchema = z
   .enum(['ACTION_REQUIRED', 'INFO', 'SUCCESS', 'WARNING'])
   .openapi('NotificationType');
+
+export const GoalCategorySchema = z
+  .enum(['Education', 'Vacation', 'Home', 'Retirement', 'Safety'])
+  .openapi('GoalCategory');
+
+/** Calendar date without a time, e.g. 2027-06-30. */
+export const IsoDateSchema = z.iso.date().openapi({ example: '2027-06-30' });

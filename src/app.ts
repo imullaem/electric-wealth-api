@@ -13,6 +13,7 @@ import {
 import { buildOpenApiDocument } from './openapi/document.js';
 import {
   createAuthRouter,
+  createGoalsRouter,
   createNotificationsRouter,
   createPreferencesRouter,
   createProfileRouter,
@@ -46,6 +47,7 @@ export function createApp({ db, corsOrigins = [], logRequests = true }: AppOptio
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
   app.use('/api/auth', createAuthRouter(db));
+  app.use('/api/wealth/goals', createGoalsRouter(db));
   app.use('/api/wealth', createWealthRouter(db));
   app.use('/api/profile', createProfileRouter(db));
   app.use('/api/preferences', createPreferencesRouter(db));

@@ -14,6 +14,7 @@ import {
 import { TokenResponseSchema } from '../src/schemas/auth.js';
 import { DashboardResponseSchema } from '../src/schemas/dashboard.js';
 import { DocumentsListResponseSchema } from '../src/schemas/documents.js';
+import { GoalSchema, GoalsListResponseSchema } from '../src/schemas/goals.js';
 import { NotificationsResponseSchema } from '../src/schemas/notifications.js';
 import { PreferencesResponseSchema, ProfileResponseSchema } from '../src/schemas/profile.js';
 
@@ -309,6 +310,58 @@ describe('preferences', () => {
     const prefs = PreferencesResponseSchema.parse(res.body);
     expect(prefs.notifications).toEqual({ ...before.notifications, sms: !before.notifications.sms });
     expect(prefs.documentDelivery).toBe('paper_and_digital');
+  });
+});
+
+describe('goals', () => {
+  const nextYear = `${new Date().getUTCFullYear() + 1}-06-30`;
+
+  it('lists goals in order', async () => {
+    const { accessToken } = await login();
+    const list = GoalsListResponseSchema.parse((await request(app).get('/api/wealth/goals').set(auth(accessToken))).body);
+    expect(list.items.map((g) => g.id)).toEqual(['goal-1', 'goal-2', 'goal-3']);
+    expect(list.total).toBe(3);
+  });
+
+  it('creates a goal, computes progress and appends it to the list', async () => {
+    const { accessToken } = await login('linda.rodriguez@example.com');
+    const res = await request(app)
+      .post('/api/wealth/goals')
+      .set(auth(accessToken))
+      .send({ name: ' New roof ', category: 'Home', targetAmount: 2000000, currentAmount: 500000, currency: 'CAD', targetDate: nextYear });
+    expect(res.status).toBe(201);
+    const goal = GoalSchema.parse(res.body);
+    expect(goal).toMatchObject({ name: 'New roof', progressPct: 25, currentAmount: 500000 });
+    const list = GoalsListResponseSchema.parse((await request(app).get('/api/wealth/goals').set(auth(accessToken))).body);
+    expect(list.items.at(-1)?.id).toBe(goal.id);
+    // New goals are not added to the dashboard summary.
+    const dash = await request(app).get('/api/wealth/dashboard').set(auth(accessToken));
+    expect(dash.body.goals.map((g: { id: string }) => g.id)).not.toContain(goal.id);
+  });
+
+  it('defaults currentAmount to 0', async () => {
+    const { accessToken } = await login('emma.wilson@example.com');
+    const res = await request(app)
+      .post('/api/wealth/goals')
+      .set(auth(accessToken))
+      .send({ name: 'Trip', category: 'Vacation', targetAmount: 300000, currency: 'CAD', targetDate: nextYear });
+    expect(res.body).toMatchObject({ currentAmount: 0, progressPct: 0 });
+  });
+
+  it('rejects invalid goals', async () => {
+    const { accessToken } = await login();
+    const base = { name: 'X', category: 'Home', targetAmount: 100000, currency: 'CAD', targetDate: nextYear };
+    for (const body of [
+      { ...base, name: '' },
+      { ...base, targetAmount: 0 },
+      { ...base, currentAmount: 200000 },
+      { ...base, targetDate: '2020-01-01' },
+      { ...base, targetDate: 'soon' },
+      { ...base, category: 'Car' },
+    ]) {
+      const res = await request(app).post('/api/wealth/goals').set(auth(accessToken)).send(body);
+      expect(res.status, JSON.stringify(body)).toBe(400);
+    }
   });
 });
 
