@@ -5,6 +5,7 @@ export { createAdvisorRouter } from './advisor.js';
 export { createAuthRouter } from './auth.js';
 export { createEducationRouter } from './education.js';
 export { createGoalsRouter } from './goals.js';
+export { createMarketRouter } from './market.js';
 export { createNotificationsRouter } from './notifications.js';
 export { createPreferencesRouter, createProfileRouter } from './profile.js';
 export { createWealthRouter } from './wealth.js';

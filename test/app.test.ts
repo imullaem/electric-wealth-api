@@ -23,6 +23,7 @@ import {
 import { nextBusinessDays } from '../src/repositories/advisor.js';
 import { EducationContentResponseSchema, GlossaryResponseSchema } from '../src/schemas/education.js';
 import { GoalSchema, GoalsListResponseSchema } from '../src/schemas/goals.js';
+import { HistoryResponseSchema, QuotesResponseSchema, SecurityDetailSchema } from '../src/schemas/market.js';
 import { NotificationsResponseSchema } from '../src/schemas/notifications.js';
 import { PreferencesResponseSchema, ProfileResponseSchema } from '../src/schemas/profile.js';
 
@@ -581,6 +582,63 @@ describe('advisor', () => {
     const after = AdvisorMessagesResponseSchema.parse((await request(app).get('/api/advisor/messages').set(auth(accessToken))).body);
     expect(after.at(-1)?.id).toBe(sent.body.id);
     expect((await request(app).post('/api/advisor/messages').set(auth(accessToken)).send({ text: '   ' })).status).toBe(400);
+  });
+});
+
+describe('market', () => {
+  it("flags securities the user holds in a visible account and has on the watchlist", async () => {
+    const { accessToken } = await login();
+    const quotes = QuotesResponseSchema.parse(
+      (await request(app).get('/api/market/quote?symbols=xeqt.to,AAPL,NOPE').set(auth(accessToken))).body,
+    );
+    expect(quotes.map((q) => [q.symbol, q.held, q.watched])).toEqual([
+      ['AAPL', false, true],
+      ['XEQT.TO', true, true],
+    ]);
+  });
+
+  it('returns a security with its description, or 404', async () => {
+    const { accessToken } = await login();
+    const zag = SecurityDetailSchema.parse((await request(app).get('/api/market/securities/zag.to').set(auth(accessToken))).body);
+    expect(zag).toMatchObject({ symbol: 'ZAG.TO', held: true, watched: false, currency: 'CAD' });
+    expect(zag.about).toBeTruthy();
+    expect((await request(app).get('/api/market/securities/NOPE').set(auth(accessToken))).status).toBe(404);
+  });
+
+  it('returns history that ends at the current price', async () => {
+    const { accessToken } = await login();
+    for (const range of ['1D', '1M', '1Y', '5Y']) {
+      const h = HistoryResponseSchema.parse(
+        (await request(app).get(`/api/market/history?symbol=VFV.TO&range=${range}`).set(auth(accessToken))).body,
+      );
+      expect(h.series.length).toBeGreaterThan(10);
+      expect(h.series.at(-1)?.c).toBe(14210);
+    }
+    expect((await request(app).get('/api/market/history?symbol=VFV.TO&range=2Y').set(auth(accessToken))).status).toBe(400);
+  });
+
+  it('searches by symbol or name', async () => {
+    const { accessToken } = await login();
+    const res = await request(app).get('/api/market/search?q=bank').set(auth(accessToken));
+    expect(res.body.items.map((i: { symbol: string }) => i.symbol)).toEqual(['NA.TO']);
+  });
+
+  it('adds to and removes from the watchlist', async () => {
+    const { accessToken } = await login('david.kim@example.com');
+    const added = QuotesResponseSchema.parse((await request(app).put('/api/market/watchlist/ZAG.TO').set(auth(accessToken))).body);
+    // Seeded entries share a timestamp, so they sort by symbol; the new one comes last.
+    expect(added.map((q) => q.symbol)).toEqual(['AAPL', 'NA.TO', 'SHOP.TO', 'VFV.TO', 'XEQT.TO', 'ZAG.TO']);
+    expect((await request(app).put('/api/market/watchlist/ZAG.TO').set(auth(accessToken))).body).toHaveLength(6);
+    const removed = QuotesResponseSchema.parse((await request(app).delete('/api/market/watchlist/AAPL').set(auth(accessToken))).body);
+    expect(removed.map((q) => q.symbol)).not.toContain('AAPL');
+    expect((await request(app).put('/api/market/watchlist/NOPE').set(auth(accessToken))).status).toBe(404);
+  });
+
+  it('serves news, the weekly roundup and baskets', async () => {
+    const { accessToken } = await login();
+    expect((await request(app).get('/api/market/news').set(auth(accessToken))).body[0].id).toBe('n1');
+    expect((await request(app).get('/api/market/roundup').set(auth(accessToken))).body).toMatchObject({ weekOf: '2024-12-01' });
+    expect((await request(app).get('/api/market/baskets').set(auth(accessToken))).body).toHaveLength(4);
   });
 });
 

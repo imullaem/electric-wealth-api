@@ -16,6 +16,7 @@ import {
   createAuthRouter,
   createEducationRouter,
   createGoalsRouter,
+  createMarketRouter,
   createNotificationsRouter,
   createPreferencesRouter,
   createProfileRouter,
@@ -56,6 +57,7 @@ export function createApp({ db, corsOrigins = [], logRequests = true }: AppOptio
   app.use('/api/notifications', createNotificationsRouter(db));
   app.use('/api/education', createEducationRouter(db));
   app.use('/api/advisor', createAdvisorRouter(db));
+  app.use('/api/market', createMarketRouter(db));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

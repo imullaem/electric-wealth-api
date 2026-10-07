@@ -678,6 +678,277 @@
           "targetDate"
         ]
       },
+      "QuotesResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/Quote"
+        }
+      },
+      "Quote": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "exchange": {
+            "type": "string"
+          },
+          "price": {
+            "type": "integer",
+            "description": "Last price, minor units of currency"
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "ISO-4217 currency code",
+            "example": "CAD"
+          },
+          "change": {
+            "type": "integer",
+            "description": "Change since previous close, minor units"
+          },
+          "changePct": {
+            "type": "number"
+          },
+          "held": {
+            "type": "boolean",
+            "description": "The signed-in user holds this security in a visible account"
+          },
+          "watched": {
+            "type": "boolean",
+            "description": "On the signed-in user's watchlist"
+          }
+        },
+        "required": [
+          "symbol",
+          "name",
+          "exchange",
+          "price",
+          "currency",
+          "change",
+          "changePct",
+          "held",
+          "watched"
+        ]
+      },
+      "SecurityDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Quote"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "about": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "HistoryResponse": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "range": {
+            "$ref": "#/components/schemas/HistoryRange"
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "ISO-4217 currency code",
+            "example": "CAD"
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "t": {
+                  "type": "string",
+                  "description": "HH:MM for 1D, YYYY-MM-DD for 1M, YYYY-MM for 1Y and 5Y"
+                },
+                "c": {
+                  "type": "integer",
+                  "description": "Close, minor units"
+                }
+              },
+              "required": [
+                "t",
+                "c"
+              ]
+            }
+          }
+        },
+        "required": [
+          "symbol",
+          "range",
+          "currency",
+          "series"
+        ]
+      },
+      "HistoryRange": {
+        "type": "string",
+        "enum": [
+          "1D",
+          "1M",
+          "1Y",
+          "5Y"
+        ]
+      },
+      "SearchResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "symbol": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "exchange": {
+                  "type": "string"
+                },
+                "currency": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3,
+                  "description": "ISO-4217 currency code",
+                  "example": "CAD"
+                }
+              },
+              "required": [
+                "symbol",
+                "name",
+                "exchange",
+                "currency"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "NewsResponse": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "publishedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "tag": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "source",
+            "publishedAt"
+          ]
+        }
+      },
+      "RoundupResponse": {
+        "type": "object",
+        "properties": {
+          "weekOf": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "publishedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "summary",
+                "publishedAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "weekOf",
+          "items"
+        ]
+      },
+      "BasketsResponse": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "return1YPct": {
+              "type": "number"
+            },
+            "holdings": {
+              "type": "integer"
+            },
+            "risk": {
+              "type": "string",
+              "enum": [
+                "Low",
+                "Medium",
+                "High"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "description",
+            "return1YPct",
+            "holdings",
+            "risk"
+          ]
+        }
+      },
       "NotificationsResponse": {
         "type": "array",
         "items": {
@@ -2537,6 +2808,524 @@
           },
           "401": {
             "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/market/quote": {
+      "get": {
+        "tags": [
+          "Market"
+        ],
+        "summary": "Quotes, with held and watched flags for the user",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated symbols. Omit for every listed security.",
+              "example": "XEQT.TO,AAPL"
+            },
+            "required": false,
+            "description": "Comma-separated symbols. Omit for every listed security.",
+            "name": "symbols",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Quotes, with held and watched flags for the user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/market/securities/{symbol}": {
+      "get": {
+        "tags": [
+          "Market"
+        ],
+        "summary": "One security with its quote and description",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z0-9.]{1,12}$",
+              "example": "XEQT.TO"
+            },
+            "required": true,
+            "name": "symbol",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One security with its quote and description",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/market/history": {
+      "get": {
+        "tags": [
+          "Market"
+        ],
+        "summary": "Closing prices over a range",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z0-9.]{1,12}$",
+              "example": "XEQT.TO"
+            },
+            "required": true,
+            "name": "symbol",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/HistoryRange"
+            },
+            "required": false,
+            "name": "range",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Closing prices over a range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/market/search": {
+      "get": {
+        "tags": [
+          "Market"
+        ],
+        "summary": "Find securities by symbol or name",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Find securities by symbol or name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/market/news": {
+      "get": {
+        "tags": [
+          "Market"
+        ],
+        "summary": "Market headlines, newest first",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Market headlines, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/market/roundup": {
+      "get": {
+        "tags": [
+          "Market"
+        ],
+        "summary": "This week's market roundup",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "This week's market roundup",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoundupResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/market/baskets": {
+      "get": {
+        "tags": [
+          "Market"
+        ],
+        "summary": "Thematic baskets",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thematic baskets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BasketsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/market/watchlist": {
+      "get": {
+        "tags": [
+          "Market"
+        ],
+        "summary": "Quotes for the user's watchlist, in the order added",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Quotes for the user's watchlist, in the order added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/market/watchlist/{symbol}": {
+      "put": {
+        "tags": [
+          "Market"
+        ],
+        "summary": "Add a security to the watchlist (no-op if already there)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z0-9.]{1,12}$",
+              "example": "XEQT.TO"
+            },
+            "required": true,
+            "name": "symbol",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The updated watchlist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Market"
+        ],
+        "summary": "Remove a security from the watchlist",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z0-9.]{1,12}$",
+              "example": "XEQT.TO"
+            },
+            "required": true,
+            "name": "symbol",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The updated watchlist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
             "content": {
               "application/json": {
                 "schema": {
