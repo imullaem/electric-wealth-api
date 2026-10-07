@@ -9,14 +9,17 @@ import {
   listPostedTransactions,
   listScheduledTransactions,
   listVisibleAccounts,
+  openAccount,
   updateAccount,
 } from '../repositories/accounts.js';
 import { getDashboard } from '../repositories/dashboard.js';
-import { findDocument, listDocuments } from '../repositories/documents.js';
+import { findDocument, listDocuments, shareDocument } from '../repositories/documents.js';
 import {
   AccountDetailSchema,
   AccountIdParamsSchema,
+  AccountOpenRequestSchema,
   AccountPatchRequestSchema,
+  AccountSummarySchema,
   AccountsListResponseSchema,
   PerformanceQuerySchema,
   PerformanceResponseSchema,
@@ -28,6 +31,8 @@ import { DashboardResponseSchema } from '../schemas/dashboard.js';
 import {
   DocumentDetailResponseSchema,
   DocumentIdParamsSchema,
+  DocumentShareRequestSchema,
+  DocumentShareResponseSchema,
   DocumentsListResponseSchema,
   DocumentsQuerySchema,
 } from '../schemas/documents.js';
@@ -55,6 +60,16 @@ registry.registerPath({
   security: secured,
   request: { query: PaginationQuerySchema },
   responses: { 200: jsonBody(AccountsListResponseSchema, 'Accounts'), ...errors(400, 401) },
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/api/wealth/accounts',
+  tags: ['Accounts'],
+  summary: 'Open a new, empty account',
+  security: secured,
+  request: { body: jsonBody(AccountOpenRequestSchema) },
+  responses: { 201: jsonBody(AccountSummarySchema, 'Opened account'), ...errors(400, 401) },
 });
 
 registry.registerPath({
@@ -117,6 +132,16 @@ registry.registerPath({
   responses: { 200: jsonBody(DocumentDetailResponseSchema, 'Document'), ...errors(401, 404) },
 });
 
+registry.registerPath({
+  method: 'post',
+  path: '/api/wealth/documents/{id}/share',
+  tags: ['Documents'],
+  summary: 'Share a document by email with a link that expires in 7 days',
+  security: secured,
+  request: { params: DocumentIdParamsSchema, body: jsonBody(DocumentShareRequestSchema) },
+  responses: { 200: jsonBody(DocumentShareResponseSchema, 'Share created'), ...errors(400, 401, 404) },
+});
+
 // ---------------------------------------------------------------------------
 // Handlers
 // ---------------------------------------------------------------------------
@@ -140,6 +165,13 @@ export function createWealthRouter(db: Db) {
     if (!query) return;
     const { items, total } = listVisibleAccounts(db, req.userId!, query.page, query.pageSize);
     res.json(AccountsListResponseSchema.parse({ items, total, page: query.page, pageSize: query.pageSize }));
+  });
+
+  router.post('/accounts', (req, res) => {
+    const body = parseOr400(AccountOpenRequestSchema, req.body, req, res);
+    if (!body) return;
+    const id = openAccount(db, req.userId!, body);
+    res.status(201).json(AccountSummarySchema.parse(findAccount(db, req.userId!, id)));
   });
 
   router.get('/accounts/:id', (req, res) => {
@@ -201,6 +233,17 @@ export function createWealthRouter(db: Db) {
     if (!query) return;
     const { items, total } = listDocuments(db, req.userId!, query);
     res.json(DocumentsListResponseSchema.parse({ items, total, page: query.page, pageSize: query.pageSize }));
+  });
+
+  router.post('/documents/:id/share', (req, res) => {
+    const body = parseOr400(DocumentShareRequestSchema, req.body, req, res);
+    if (!body) return;
+    if (!findDocument(db, req.userId!, req.params.id)) {
+      sendError(req, res, 404, 'NOT_FOUND', 'Document not found.');
+      return;
+    }
+    const expiresAt = shareDocument(db, req.userId!, req.params.id, body.recipient);
+    res.json(DocumentShareResponseSchema.parse({ recipient: body.recipient, expiresAt }));
   });
 
   router.get('/documents/:id', (req, res) => {

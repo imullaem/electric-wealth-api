@@ -1,5 +1,12 @@
+import { randomUUID } from 'node:crypto';
 import { opt, pageClause, toBool, type Db } from '../db/connection.js';
-import type { AccountPatchRequest, AccountSummary, Holding, Transaction } from '../schemas/accounts.js';
+import type {
+  AccountOpenRequest,
+  AccountPatchRequest,
+  AccountSummary,
+  Holding,
+  Transaction,
+} from '../schemas/accounts.js';
 
 interface AccountRow {
   id: string;
@@ -64,6 +71,34 @@ export function updateAccount(db: Db, userId: string, accountId: string, patch: 
   if (patch.hidden !== undefined) {
     db.prepare('UPDATE accounts SET hidden = ? WHERE user_id = ? AND id = ?').run(patch.hidden ? 1 : 0, userId, accountId);
   }
+}
+
+/** Tax treatment and starting contribution room (cents) for a newly opened account. */
+const NEW_ACCOUNT_RULES: Record<AccountOpenRequest['type'], { taxStatus: string; contributionRoom: number | null }> = {
+  TFSA: { taxStatus: 'Tax-free', contributionRoom: 700000 }, // 2024 annual limit, $7,000
+  FHSA: { taxStatus: 'Tax-free', contributionRoom: 800000 }, // annual limit, $8,000
+  RRSP: { taxStatus: 'Tax-deferred', contributionRoom: null }, // depends on income; set later
+  NON_REGISTERED: { taxStatus: 'Taxable', contributionRoom: null },
+};
+
+/** Opens an empty account at the end of the user's list and returns its id. */
+export function openAccount(db: Db, userId: string, input: AccountOpenRequest): string {
+  const id = `acct-${randomUUID().slice(0, 8)}`;
+  const rules = NEW_ACCOUNT_RULES[input.type];
+  const { next } = db
+    .prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 AS next FROM accounts WHERE user_id = ?')
+    .get(userId) as { next: number };
+  db.prepare(
+    `INSERT INTO accounts (user_id, id, type, display_name, nickname, balance, currency, hidden, day_change, day_change_pct,
+                           contribution_room, tax_status, rate_of_return, sort_order)
+     VALUES (?, ?, ?, ?, ?, 0, 'CAD', 0, 0, 0, ?, ?, 0, ?)`,
+  ).run(userId, id, input.type, input.displayName, input.nickname || null, rules.contributionRoom, rules.taxStatus, next);
+  // An empty performance record, so the account page shows "no history yet" rather than an error.
+  db.prepare(
+    `INSERT INTO account_performance (user_id, account_id, time_weighted_return_pct, currency, benchmark_name)
+     VALUES (?, ?, 0, 'CAD', 'S&P/TSX Composite')`,
+  ).run(userId, id);
+  return id;
 }
 
 interface HoldingRow {

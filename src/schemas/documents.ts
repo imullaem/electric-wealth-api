@@ -37,3 +37,16 @@ export const DocumentDetailResponseSchema = z
 export const DocumentIdParamsSchema = z.object({
   id: z.string().openapi({ example: 'd1' }),
 });
+
+export const DocumentShareRequestSchema = z
+  .object({
+    recipient: z.email().openapi({ example: 'accountant@example.com' }),
+  })
+  .openapi('DocumentShareRequest');
+
+export const DocumentShareResponseSchema = z
+  .object({
+    recipient: z.email(),
+    expiresAt: z.iso.datetime().openapi({ description: 'The shared link stops working after this time (7 days)' }),
+  })
+  .openapi('DocumentShareResponse');

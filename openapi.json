@@ -933,6 +933,37 @@
           "RRIF"
         ]
       },
+      "AccountOpenRequest": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/OpenableAccountType"
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "example": "Travel TFSA"
+          },
+          "nickname": {
+            "type": "string",
+            "maxLength": 40
+          }
+        },
+        "required": [
+          "type",
+          "displayName"
+        ]
+      },
+      "OpenableAccountType": {
+        "type": "string",
+        "enum": [
+          "TFSA",
+          "RRSP",
+          "FHSA",
+          "NON_REGISTERED"
+        ]
+      },
       "AccountDetail": {
         "allOf": [
           {
@@ -1273,6 +1304,37 @@
           "url",
           "contentType",
           "base64Stub"
+        ]
+      },
+      "DocumentShareResponse": {
+        "type": "object",
+        "properties": {
+          "recipient": {
+            "type": "string",
+            "format": "email"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The shared link stops working after this time (7 days)"
+          }
+        },
+        "required": [
+          "recipient",
+          "expiresAt"
+        ]
+      },
+      "DocumentShareRequest": {
+        "type": "object",
+        "properties": {
+          "recipient": {
+            "type": "string",
+            "format": "email",
+            "example": "accountant@example.com"
+          }
+        },
+        "required": [
+          "recipient"
         ]
       },
       "HealthResponse": {
@@ -2058,6 +2120,59 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Open a new, empty account",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountOpenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Opened account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/wealth/accounts/{id}": {
@@ -2479,6 +2594,82 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DocumentDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, expired or not MFA-verified access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wealth/documents/{id}/share": {
+      "post": {
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Share a document by email with a link that expires in 7 days",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "d1"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentShareRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Share created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentShareResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
               }
             }

@@ -106,6 +106,19 @@ export const AccountPatchRequestSchema = z
 
 export type AccountPatchRequest = z.infer<typeof AccountPatchRequestSchema>;
 
+/** Account types a client can open online. The others are opened through an advisor. */
+export const OpenableAccountTypeSchema = z.enum(['TFSA', 'RRSP', 'FHSA', 'NON_REGISTERED']).openapi('OpenableAccountType');
+
+export const AccountOpenRequestSchema = z
+  .object({
+    type: OpenableAccountTypeSchema,
+    displayName: z.string().trim().min(1).max(40).openapi({ example: 'Travel TFSA' }),
+    nickname: z.string().trim().max(40).optional(),
+  })
+  .openapi('AccountOpenRequest');
+
+export type AccountOpenRequest = z.infer<typeof AccountOpenRequestSchema>;
+
 export const AccountIdParamsSchema = z.object({
   id: z.string().openapi({ example: 'tfsa' }),
 });

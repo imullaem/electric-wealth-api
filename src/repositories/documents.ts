@@ -57,3 +57,16 @@ export function findDocument(db: Db, userId: string, documentId: string): Docume
     | undefined;
   return row && toDocument(row);
 }
+
+const SHARE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Records a 7-day share of a document with someone by email. Returns the expiry time. */
+export function shareDocument(db: Db, userId: string, documentId: string, recipient: string): string {
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + SHARE_TTL_MS).toISOString().replace(/\.\d{3}Z$/, 'Z');
+  db.prepare(
+    `INSERT INTO document_shares (user_id, document_id, recipient, created_at, expires_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  ).run(userId, documentId, recipient, now.toISOString().replace(/\.\d{3}Z$/, 'Z'), expiresAt);
+  return expiresAt;
+}

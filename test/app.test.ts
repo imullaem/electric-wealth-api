@@ -209,6 +209,42 @@ describe('accounts', () => {
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 
+  it('opens a new empty account with type-specific rules', async () => {
+    const { accessToken } = await login('emma.wilson@example.com');
+    const res = await request(app)
+      .post('/api/wealth/accounts')
+      .set(auth(accessToken))
+      .send({ type: 'RRSP', displayName: ' Spousal RRSP ' });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ type: 'RRSP', displayName: 'Spousal RRSP', balance: 0, taxStatus: 'Tax-deferred', contributionRoom: null });
+    const id = res.body.id as string;
+    const list = AccountsListResponseSchema.parse((await request(app).get('/api/wealth/accounts').set(auth(accessToken))).body);
+    expect(list.items.at(-1)?.id).toBe(id);
+    const detail = AccountDetailSchema.parse((await request(app).get(`/api/wealth/accounts/${id}`).set(auth(accessToken))).body);
+    expect(detail.holdings).toEqual([]);
+    const perf = await request(app).get(`/api/wealth/accounts/${id}/performance`).set(auth(accessToken));
+    expect(perf.status).toBe(200);
+    expect(perf.body.series).toEqual([]);
+    const txs = TransactionsResponseSchema.parse(
+      (await request(app).get(`/api/wealth/accounts/${id}/transactions`).set(auth(accessToken))).body,
+    );
+    expect(txs.total).toBe(0);
+  });
+
+  it('gives a new TFSA the annual contribution room', async () => {
+    const { accessToken } = await login('emma.wilson@example.com');
+    const res = await request(app).post('/api/wealth/accounts').set(auth(accessToken)).send({ type: 'TFSA', displayName: 'Second TFSA' });
+    expect(res.body).toMatchObject({ taxStatus: 'Tax-free', contributionRoom: 700000 });
+  });
+
+  it('rejects account types that need an advisor', async () => {
+    const { accessToken } = await login();
+    for (const body of [{ type: 'RESP', displayName: 'Kids' }, { type: 'TFSA', displayName: '' }]) {
+      const res = await request(app).post('/api/wealth/accounts').set(auth(accessToken)).send(body);
+      expect(res.status).toBe(400);
+    }
+  });
+
   it('persists a nickname change to the database', async () => {
     const { accessToken } = await login('michael.thompson@example.com');
     const patch = await request(app)
@@ -288,6 +324,34 @@ describe('profile', () => {
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');
     }
+  });
+});
+
+describe('document sharing', () => {
+  it('records a 7-day share', async () => {
+    const { accessToken } = await login();
+    const before = Date.now();
+    const res = await request(app)
+      .post('/api/wealth/documents/d1/share')
+      .set(auth(accessToken))
+      .send({ recipient: 'accountant@example.com' });
+    expect(res.status).toBe(200);
+    expect(res.body.recipient).toBe('accountant@example.com');
+    const days = (Date.parse(res.body.expiresAt) - before) / 86_400_000;
+    expect(days).toBeGreaterThan(6.99);
+    expect(days).toBeLessThan(7.01);
+    const row = db.prepare("SELECT recipient FROM document_shares WHERE user_id = 'sarah' AND document_id = 'd1'").get() as {
+      recipient: string;
+    };
+    expect(row.recipient).toBe('accountant@example.com');
+  });
+
+  it('validates the recipient and the document', async () => {
+    const { accessToken } = await login();
+    expect((await request(app).post('/api/wealth/documents/d1/share').set(auth(accessToken)).send({ recipient: 'nope' })).status).toBe(400);
+    expect(
+      (await request(app).post('/api/wealth/documents/zzz/share').set(auth(accessToken)).send({ recipient: 'a@example.com' })).status,
+    ).toBe(404);
   });
 });
 
