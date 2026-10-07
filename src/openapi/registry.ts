@@ -25,6 +25,7 @@ const errorDescriptions: Record<number, string> = {
   401: 'Missing, expired or not MFA-verified access token',
   404: 'Resource not found',
   409: 'Conflicts with the current state (e.g. the slot was just taken)',
+  422: 'The details did not match our records',
   429: 'Rate limited',
 };
 

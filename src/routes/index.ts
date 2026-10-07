@@ -8,6 +8,7 @@ export { createGoalsRouter } from './goals.js';
 export { createMarketRouter } from './market.js';
 export { createNotificationsRouter } from './notifications.js';
 export { createPreferencesRouter, createProfileRouter } from './profile.js';
+export { createRegistrationRouter } from './registration.js';
 export { createWealthRouter } from './wealth.js';
 
 registry.registerPath({

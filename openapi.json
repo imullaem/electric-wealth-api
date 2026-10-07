@@ -1269,6 +1269,241 @@
           }
         }
       },
+      "RegistrationStartResponse": {
+        "type": "object",
+        "properties": {
+          "registrationId": {
+            "type": "string",
+            "example": "reg-1a2b3c4d"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Finish every step before this time (30 minutes)"
+          }
+        },
+        "required": [
+          "registrationId",
+          "expiresAt"
+        ]
+      },
+      "RegistrationStartRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 72,
+            "pattern": "[A-Za-z]"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "VerifyIdentityResponse": {
+        "type": "object",
+        "properties": {
+          "verified": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "The client name on file, to confirm the right record was found"
+          }
+        },
+        "required": [
+          "verified",
+          "name"
+        ]
+      },
+      "VerifyIdentityRequest": {
+        "type": "object",
+        "properties": {
+          "registrationId": {
+            "type": "string",
+            "example": "reg-1a2b3c4d"
+          },
+          "accountNumber": {
+            "type": "string",
+            "pattern": "^\\d{10}$"
+          },
+          "postalCode": {
+            "type": "string",
+            "maxLength": 7
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date",
+            "example": "2027-06-30"
+          }
+        },
+        "required": [
+          "registrationId",
+          "accountNumber",
+          "postalCode",
+          "dateOfBirth"
+        ]
+      },
+      "SecurityQuestionsResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/SecurityQuestion"
+        }
+      },
+      "SecurityQuestion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ]
+      },
+      "StepSavedResponse": {
+        "type": "object",
+        "properties": {
+          "saved": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "saved"
+        ]
+      },
+      "SecurityAnswersRequest": {
+        "type": "object",
+        "properties": {
+          "registrationId": {
+            "type": "string",
+            "example": "reg-1a2b3c4d"
+          },
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "questionId": {
+                  "type": "string"
+                },
+                "answer": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 100
+                }
+              },
+              "required": [
+                "questionId",
+                "answer"
+              ]
+            }
+          }
+        },
+        "required": [
+          "registrationId",
+          "answers"
+        ]
+      },
+      "TrustedContactRequest": {
+        "type": "object",
+        "properties": {
+          "registrationId": {
+            "type": "string",
+            "example": "reg-1a2b3c4d"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "relationship": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "registrationId",
+          "name",
+          "relationship"
+        ]
+      },
+      "RegistrationCompleteRequest": {
+        "type": "object",
+        "properties": {
+          "registrationId": {
+            "type": "string",
+            "example": "reg-1a2b3c4d"
+          },
+          "mfaMethod": {
+            "type": "string",
+            "enum": [
+              "sms",
+              "email"
+            ],
+            "description": "Where one-time sign-in codes are sent"
+          },
+          "consents": {
+            "type": "object",
+            "properties": {
+              "terms": {
+                "type": "boolean",
+                "enum": [
+                  true
+                ]
+              },
+              "privacy": {
+                "type": "boolean",
+                "enum": [
+                  true
+                ]
+              },
+              "electronicDelivery": {
+                "type": "boolean",
+                "enum": [
+                  true
+                ]
+              }
+            },
+            "required": [
+              "terms",
+              "privacy",
+              "electronicDelivery"
+            ]
+          }
+        },
+        "required": [
+          "registrationId",
+          "mfaMethod",
+          "consents"
+        ]
+      },
       "DashboardResponse": {
         "type": "object",
         "properties": {
@@ -3670,6 +3905,337 @@
           },
           "404": {
             "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/registration/start": {
+      "post": {
+        "tags": [
+          "Registration"
+        ],
+        "summary": "Step 1: choose a login (email and password)",
+        "description": "Starts online enrolment for an existing client. 409 EMAIL_TAKEN if the email already has online access.",
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationStartRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Step 1: choose a login (email and password)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationStartResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with the current state (e.g. the slot was just taken)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/registration/verify-identity": {
+      "post": {
+        "tags": [
+          "Registration"
+        ],
+        "summary": "Step 2: match the account number, postal code and date of birth on file",
+        "description": "422 IDENTITY_MISMATCH if no client record matches all three; 409 ALREADY_ENROLLED if that client already has online access.",
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyIdentityRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Step 2: match the account number, postal code and date of birth on file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyIdentityResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with the current state (e.g. the slot was just taken)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The details did not match our records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/registration/security-questions": {
+      "get": {
+        "tags": [
+          "Registration"
+        ],
+        "summary": "Questions to choose from in step 3",
+        "parameters": [
+          {
+            "schema": {
+              "$ref": "#/components/schemas/Language"
+            },
+            "required": false,
+            "name": "accept-language",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Security questions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityQuestionsResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Registration"
+        ],
+        "summary": "Step 3: answer two security questions",
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecurityAnswersRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Step 3: answer two security questions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepSavedResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with the current state (e.g. the slot was just taken)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/registration/trusted-contact": {
+      "post": {
+        "tags": [
+          "Registration"
+        ],
+        "summary": "Step 5 (optional): add a trusted contact",
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrustedContactRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Step 5 (optional): add a trusted contact",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StepSavedResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with the current state (e.g. the slot was just taken)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/registration/complete": {
+      "post": {
+        "tags": [
+          "Registration"
+        ],
+        "summary": "Final step: choose the code method, accept the terms and create the login",
+        "description": "Creates the user and returns a signed-in session (mfaRequired is false: the client just proved their identity).",
+        "requestBody": {
+          "description": "JSON body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationCompleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Final step: choose the code method, accept the terms and create the login",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicts with the current state (e.g. the slot was just taken)",
             "content": {
               "application/json": {
                 "schema": {

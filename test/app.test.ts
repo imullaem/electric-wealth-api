@@ -642,6 +642,108 @@ describe('market', () => {
   });
 });
 
+describe('registration', () => {
+  const priya = { accountNumber: '7391046285', postalCode: 'k1p5g4', dateOfBirth: '1990-02-17' };
+  const consents = { terms: true, privacy: true, electronicDelivery: true };
+
+  async function start(email: string) {
+    const res = await request(app).post('/api/registration/start').send({ email, password: 'Welcome2026' });
+    expect(res.status).toBe(201);
+    return res.body.registrationId as string;
+  }
+
+  it('enrols an existing client end to end and lets them sign in', async () => {
+    const registrationId = await start('priya.patel@example.com');
+
+    const verified = await request(app).post('/api/registration/verify-identity').send({ registrationId, ...priya });
+    expect(verified.body).toEqual({ verified: true, name: 'Priya Patel' });
+
+    const questions = await request(app).get('/api/registration/security-questions');
+    expect(questions.body).toHaveLength(5);
+    expect(
+      (
+        await request(app)
+          .post('/api/registration/security-questions')
+          .send({ registrationId, answers: [{ questionId: 'q1', answer: 'Biscuit' }, { questionId: 'q2', answer: 'Ottawa' }] })
+      ).body,
+    ).toEqual({ saved: true });
+    expect(
+      (await request(app).post('/api/registration/trusted-contact').send({ registrationId, name: 'Anil Patel', relationship: 'Brother' })).status,
+    ).toBe(200);
+
+    const done = await request(app).post('/api/registration/complete').send({ registrationId, mfaMethod: 'email', consents });
+    expect(done.status).toBe(201);
+    expect(TokenResponseSchema.parse(done.body).mfaRequired).toBe(false);
+
+    // The returned session works immediately, and the new user has a profile and a dashboard.
+    const profile = ProfileResponseSchema.parse((await request(app).get('/api/profile').set(auth(done.body.accessToken))).body);
+    expect(profile).toMatchObject({ name: 'Priya Patel', email: 'priya.patel@example.com', trustedContact: { name: 'Anil Patel', relationship: 'Brother' } });
+    expect(profile.address.city).toBe('Ottawa');
+    const dash = DashboardResponseSchema.parse((await request(app).get('/api/wealth/dashboard').set(auth(done.body.accessToken))).body);
+    expect(dash.portfolio.totalValue).toBe(0);
+    expect(dash.quickLinks.map((l) => l.deepLink)).toEqual([
+      'electricwealth://accounts/new',
+      'electricwealth://advisor',
+      'electricwealth://learn',
+    ]);
+    const notes = await request(app).get('/api/notifications').set(auth(done.body.accessToken));
+    expect(notes.body[0].id).toBe('welcome');
+    const advisor = await request(app).get('/api/advisor/availability').set(auth(done.body.accessToken));
+    expect(advisor.body.advisor.name).toBe('Jordan Avery');
+
+    // Normal sign-in with the chosen password works too.
+    const signIn = await request(app)
+      .post('/api/auth/token')
+      .send({ grantType: 'password', username: 'priya.patel@example.com', password: 'Welcome2026' });
+    expect(signIn.status).toBe(200);
+
+    // The registration is used up and the client cannot enrol twice.
+    expect((await request(app).post('/api/registration/complete').send({ registrationId, mfaMethod: 'sms', consents })).status).toBe(404);
+    const again = await start('priya.other@example.com');
+    const dup = await request(app).post('/api/registration/verify-identity').send({ registrationId: again, ...priya });
+    expect(dup.status).toBe(409);
+    expect(dup.body.error.code).toBe('ALREADY_ENROLLED');
+  });
+
+  it('uses the branch record language for a French-speaking client', async () => {
+    const registrationId = await start('marc.tremblay@example.com');
+    await request(app).post('/api/registration/verify-identity').send({ registrationId, accountNumber: '2654819370', postalCode: 'H2X 1Y4', dateOfBirth: '1985-09-03' });
+    await request(app)
+      .post('/api/registration/security-questions')
+      .send({ registrationId, answers: [{ questionId: 'q3', answer: 'Lada' }, { questionId: 'q5', answer: 'rue Rachel' }] });
+    const done = await request(app).post('/api/registration/complete').send({ registrationId, mfaMethod: 'sms', consents });
+    const prefs = PreferencesResponseSchema.parse((await request(app).get('/api/preferences').set(auth(done.body.accessToken))).body);
+    expect(prefs).toMatchObject({ language: 'fr-CA', notifications: { sms: true } });
+    const profile = ProfileResponseSchema.parse((await request(app).get('/api/profile').set(auth(done.body.accessToken))).body);
+    expect(profile.trustedContact).toBeUndefined();
+  });
+
+  it('rejects taken emails, weak passwords and mismatched identity', async () => {
+    expect((await request(app).post('/api/registration/start').send({ email: 'sarah.chen@example.com', password: 'Welcome2026' })).body.error.code).toBe('EMAIL_TAKEN');
+    expect((await request(app).post('/api/registration/start').send({ email: 'new@example.com', password: 'short' })).status).toBe(400);
+    expect((await request(app).post('/api/registration/start').send({ email: 'new@example.com', password: 'lettersonly' })).status).toBe(400);
+    const registrationId = await start('someone@example.com');
+    const wrong = await request(app).post('/api/registration/verify-identity').send({ registrationId, ...priya, dateOfBirth: '1990-02-18' });
+    expect(wrong.status).toBe(422);
+    expect(wrong.body.error.code).toBe('IDENTITY_MISMATCH');
+    const sarah = await request(app)
+      .post('/api/registration/verify-identity')
+      .send({ registrationId, accountNumber: '4829157302', postalCode: 'M5V 2A1', dateOfBirth: '1996-04-12' });
+    expect(sarah.body.error.code).toBe('ALREADY_ENROLLED');
+  });
+
+  it('enforces the step order and the consents', async () => {
+    const registrationId = await start('order@example.com');
+    const early = await request(app).post('/api/registration/security-questions').send({ registrationId, answers: [{ questionId: 'q1', answer: 'Rex' }, { questionId: 'q2', answer: 'Paris' }] });
+    expect(early.body.error.code).toBe('STEP_OUT_OF_ORDER');
+    expect((await request(app).post('/api/registration/complete').send({ registrationId, mfaMethod: 'sms', consents })).body.error.code).toBe('STEP_OUT_OF_ORDER');
+    expect((await request(app).post('/api/registration/complete').send({ registrationId, mfaMethod: 'sms', consents: { ...consents, privacy: false } })).status).toBe(400);
+    const same = await request(app).post('/api/registration/security-questions').send({ registrationId, answers: [{ questionId: 'q1', answer: 'Rex' }, { questionId: 'q1', answer: 'Max' }] });
+    expect(same.status).toBe(400);
+    expect((await request(app).post('/api/registration/verify-identity').send({ registrationId: 'reg-nope', ...priya })).status).toBe(404);
+  });
+});
+
 describe('notifications', () => {
   it('lists notifications newest first with read state', async () => {
     const { accessToken } = await login();
